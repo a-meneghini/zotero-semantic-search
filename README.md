@@ -43,3 +43,11 @@ A web application for semantic search and topic modeling of academic papers stor
 4. Run the Flask app:
    python app.py
 Open your browser and go to http://127.0.0.1:5000.
+
+## Screenshots
+
+TO BE IMPLEMENTED
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
