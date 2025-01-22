@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zotero Semantic Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .logo {
+            width: 200px; /* logo size */
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #status-message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .toggle-button {
+            margin-top: 10px;
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+        #query {
+            width: 80%; /* search bar width */
+            padding: 10px;
+            font-size: 16px;
+        }
+        .paper-list {
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .show-more-button {
+            margin-top: 10px;
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Logo -->
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
+
+    <h1>Zotero Semantic Search</h1>
+
+    <!-- Status Message -->
+    <div id="status-message">Fetching data from Zotero...</div>
+
+    <!-- Reload Data Button -->
+    <button id="reloadData">Reload Data</button>
+
+    <!-- Statistics Section -->
+    <section>
+        <h2>Database Statistics</h2>
+        <div id="statistics"></div>
+    </section>
+
+    <!-- Semantic Search Section -->
+    <section>
+        <h2>Semantic Search</h2>
+        <form id="searchForm">
+            <input type="text" id="query" name="q" placeholder="Enter a query...">
+            <button type="submit">Search</button>
+        </form>
+        <div class="toggle-button" onclick="toggleTable('searchResults')">Show/Hide Results</div>
+        <div id="searchResults" style="display: none;"></div>
+    </section>
+
+    <!-- Library Main Topics Section -->
+    <section>
+        <h2>Library Main Topics</h2>
+        <button id="loadTopics">Load Topics</button>
+        <div class="toggle-button" onclick="toggleTable('topicsResults')">Show/Hide Topics</div>
+        <div id="topicsResults" style="display: none;"></div>
+    </section>
+
+    <script>
+        // Fetch database statistics
+        fetch('/statistics')
+            .then(response => response.json())
+            .then(data => {
+                const stats = `
+                    <p><strong>Number of Entries:</strong> ${data.num_entries}</p>
+                    <p><strong>Embedding Model:</strong> ${data.embedding_model}</p>
+                `;
+                document.getElementById('statistics').innerHTML = stats;
+            })
+            .catch(error => console.error('Error fetching statistics:', error));
+
+        // Function to toggle table visibility
+        function toggleTable(tableId) {
+            const table = document.getElementById(tableId);
+            if (table.style.display === "none") {
+                table.style.display = "block";
+            } else {
+                table.style.display = "none";
+            }
+        }
+
+        // Fetch data from Zotero and update progress bar
+        function fetchData() {
+            const eventSource = new EventSource('/progress');
+            eventSource.onmessage = function(event) {
+                const [phase, progress] = event.data.split(':');
+                if (phase === 'retrieval') {
+                    document.getElementById('status-message').textContent = "Fetching data from Zotero...";
+                } else if (phase === 'embedding') {
+                    document.getElementById('status-message').textContent = "Generating embeddings...";
+                }
+            };
+        }
+
+        // Automatically fetch data when the page loads
+        fetchData();
+
+        // Handle search form submission
+        document.getElementById('searchForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const query = document.getElementById('query').value;
+            if (!query) {
+                alert("Please enter a query.");
+                return;
+            }
+
+            const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) {
+                alert("Error fetching search results.");
+                return;
+            }
+            const results = await response.json();
+
+            // Display results in a table
+            const table = `<table>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Abstract</th>
+                    <th>DOI</th>
+                    <th>Score</th>
+                </tr>
+                ${results.map(result => `
+                    <tr>
+                        <td>${result.title}</td>
+                        <td>${result.author || 'N/A'}</td>
+                        <td>${result.abstract}</td>
+                        <td>${result.doi}</td>
+                        <td>${result.score.toFixed(4)}</td>
+                    </tr>
+                `).join('')}
+            </table>`;
+            document.getElementById('searchResults').innerHTML = table;
+            document.getElementById('searchResults').style.display = "block"; // Show the table
+        };
+
+        // Handle loading topics
+        document.getElementById('loadTopics').onclick = async function() {
+            const response = await fetch('/topics');
+            const topics = await response.json();
+
+            // Display topics in a table
+            const table = `<table>
+                <tr>
+                    <th>Cluster</th>
+                    <th>Keywords</th>
+                    <th>Number of Papers</th>
+                    <th>Paper Titles</th>
+                </tr>
+                ${Object.entries(topics).map(([cluster, details]) => {
+                    const papers = details.papers;
+                    const initialPapers = papers.slice(0, 10); // Mostra solo i primi 10 paper
+                    const remainingPapers = papers.slice(10); // Paper rimanenti
+                    return `
+                        <tr>
+                            <td>${cluster}</td>
+                            <td>${details.keywords.join(', ')}</td>
+                            <td>${details.num_papers}</td>
+                            <td>
+                                <div class="paper-list">
+                                    <ul id="papers-${cluster}">
+                                        ${initialPapers.map(paper => `<li>${paper}</li>`).join('')}
+                                    </ul>
+                                    ${remainingPapers.length > 0 ? `
+                                        <button class="show-more-button" onclick="showMorePapers('${cluster}', ${JSON.stringify(remainingPapers)})">
+                                            Show more (${remainingPapers.length})
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </table>`;
+            document.getElementById('topicsResults').innerHTML = table;
+            document.getElementById('topicsResults').style.display = "block"; // Show the table
+        };
+
+        // Function to show more papers
+        function showMorePapers(clusterId, remainingPapers) {
+            const paperList = document.getElementById(`papers-${clusterId}`);
+            remainingPapers.forEach(paper => {
+                const li = document.createElement('li');
+                li.textContent = paper;
+                paperList.appendChild(li);
+            });
+            // Rimuovi il pulsante "Show more" dopo aver mostrato tutti i paper
+            const button = paperList.nextElementSibling;
+            if (button && button.classList.contains('show-more-button')) {
+                button.remove();
+            }
+        }
+
+        // Handle reloading data
+        document.getElementById('reloadData').onclick = async function() {
+            const response = await fetch('/reload', { method: 'POST' });
+            const result = await response.json();
+            alert(result.message);
+            location.reload();  // Reload the page to restart the process
+        };
+    </script>
+</body>
+</html>

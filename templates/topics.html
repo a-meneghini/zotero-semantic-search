@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Main Topics</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .paper-list {
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .show-more-button {
+            margin-top: 10px;
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Library Main Topics</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Cluster</th>
+                <th>Keywords</th>
+                <th>Number of Papers</th>
+                <th>Paper Titles</th>
+            </tr>
+        </thead>
+        <tbody id="topics-table">
+            <!-- Rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        // Fetch topics data from the API
+        fetch('/topics')
+            .then(response => response.json())
+            .then(data => {
+                console.log("Topics data received:", data);  // Debug: Stampa i dati ricevuti
+                const tableBody = document.getElementById('topics-table');
+                for (const [cluster, details] of Object.entries(data)) {
+                    const papers = details.papers;
+                    const initialPapers = papers.slice(0, 10); // Mostra solo i primi 10 paper
+                    const remainingPapers = papers.slice(10); // Paper rimanenti
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${cluster}</td>
+                        <td>${details.keywords.join(', ')}</td>
+                        <td>${details.num_papers}</td>
+                        <td>
+                            <div class="paper-list">
+                                <ul id="papers-${cluster}">
+                                    ${initialPapers.map(paper => `<li>${paper}</li>`).join('')}
+                                </ul>
+                                ${remainingPapers.length > 0 ? `
+                                    <button class="show-more-button" onclick="showMorePapers('${cluster}', ${JSON.stringify(remainingPapers)})">
+                                        Show more (${remainingPapers.length})
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            })
+            .catch(error => console.error('Error fetching topics:', error));
+
+        // Function to show more papers
+        function showMorePapers(clusterId, remainingPapers) {
+            const paperList = document.getElementById(`papers-${clusterId}`);
+            remainingPapers.forEach(paper => {
+                const li = document.createElement('li');
+                li.textContent = paper;
+                paperList.appendChild(li);
+            });
+            // Rimuovi il pulsante "Show more" dopo aver mostrato tutti i paper
+            const button = paperList.nextElementSibling;
+            if (button && button.classList.contains('show-more-button')) {
+                button.remove();
+            }
+        }
+    </script>
+</body>
+</html>
