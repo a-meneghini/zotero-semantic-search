@@ -55,12 +55,12 @@
         fetch('/topics')
             .then(response => response.json())
             .then(data => {
-                console.log("Topics data received:", data);  // Debug: Stampa i dati ricevuti
+                console.log("Topics data received:", data);  // Debug: log the data received
                 const tableBody = document.getElementById('topics-table');
                 for (const [cluster, details] of Object.entries(data)) {
                     const papers = details.papers;
-                    const initialPapers = papers.slice(0, 10); // Mostra solo i primi 10 paper
-                    const remainingPapers = papers.slice(10); // Paper rimanenti
+                    const initialPapers = papers.slice(0, 10); // show 10 papers initially
+                    const remainingPapers = papers.slice(10); // show remaining papers on button click
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -93,7 +93,7 @@
                 li.textContent = paper;
                 paperList.appendChild(li);
             });
-            // Rimuovi il pulsante "Show more" dopo aver mostrato tutti i paper
+            // remove "Show more" button after showing all papers
             const button = paperList.nextElementSibling;
             if (button && button.classList.contains('show-more-button')) {
                 button.remove();

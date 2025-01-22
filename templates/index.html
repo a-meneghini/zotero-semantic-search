@@ -190,8 +190,8 @@
                 </tr>
                 ${Object.entries(topics).map(([cluster, details]) => {
                     const papers = details.papers;
-                    const initialPapers = papers.slice(0, 10); // Mostra solo i primi 10 paper
-                    const remainingPapers = papers.slice(10); // Paper rimanenti
+                    const initialPapers = papers.slice(0, 10); // Only show first 10 papers
+                    const remainingPapers = papers.slice(10); // Remaining papers
                     return `
                         <tr>
                             <td>${cluster}</td>
@@ -225,7 +225,7 @@
                 li.textContent = paper;
                 paperList.appendChild(li);
             });
-            // Rimuovi il pulsante "Show more" dopo aver mostrato tutti i paper
+            // Remove "Show more" after showing all papers
             const button = paperList.nextElementSibling;
             if (button && button.classList.contains('show-more-button')) {
                 button.remove();

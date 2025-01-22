@@ -82,7 +82,7 @@ def fetch_zotero_data():
         print(f"\nTotal items fetched: {len(titles)}")
         print("Data retrieval complete.")
 
-        # verify data
+        # Verify data
         if not titles or not abstracts or not dois:
             print("Error: Titles, abstracts, or DOIs are missing or empty.")
             return
@@ -102,9 +102,9 @@ def fetch_zotero_data():
             batch_embeddings = model.encode(batch)  # Generate embeddings for the batch
             embeddings.extend(batch_embeddings)
 
-            # Calcola il progresso
+            # calculate progress
             progress = int((i + len(batch)) / total_items * 100)
-            print(f"embedding:{progress}")  # Invia aggiornamento del progresso
+            print(f"embedding:{progress}")  # send progress
 
         print("\nEmbedding generation complete.")
 
@@ -190,7 +190,7 @@ def topics_api():
         return jsonify({"error": "No data available. Please fetch data first."}), 400
     titles, abstracts, dois, embeddings = cached_data
 
-    # Debug: Stampa i primi 5 titoli e embeddings
+    # Debug: print the shape of the embeddings
     print("Sample embeddings shape:", np.array(embeddings).shape)
 
     # Load additional metadata from the CSV file
@@ -212,13 +212,13 @@ def topics_api():
     clusterer = hdbscan.HDBSCAN(min_cluster_size=5, metric='euclidean', cluster_selection_epsilon=0.5)  # Tunable parameters
     cluster_labels = clusterer.fit_predict(reduced_embeddings)
 
-    # Debug: Stampa le etichette dei cluster
+    # Debug: print the cluster labels
     print("Cluster labels:", cluster_labels)
-    print("Number of clusters:", len(set(cluster_labels)) - 1)  # Escludi il rumore (-1)
+    print("Number of clusters:", len(set(cluster_labels)) - 1)  # remove noise points
     print("Percentage of noise points:", list(cluster_labels).count(-1) / len(cluster_labels))
 
     # Extract keywords using TF-IDF
-    vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=1000, ngram_range=(1, 2))
     tfidf_matrix = vectorizer.fit_transform(valid_abstracts)
     feature_names = vectorizer.get_feature_names_out()
 
@@ -248,8 +248,6 @@ def topics_api():
             "num_papers": num_papers,
             "papers": papers
         }
-
-    print("Topics data:", topics)  # Debug: Stampa i dati dei topics
     return jsonify(topics)
 
 #route to render the topics page
